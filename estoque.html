@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simonetti - Gestão de Estoque</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --primary: #004a99;
+      --danger: #dc3545;
+      --success: #28a745;
+      --warning: #f39c12;
+      --gray: #6c757d;
+      --light: #f4f7f6;
+    }
+
+    body { background-color: var(--light); margin: 0; font-family: 'Segoe UI', sans-serif; }
+
+    .header-site {
+      text-align: center;
+      padding: 30px 0;
+      background: linear-gradient(135deg, #004a99 0%, #002d5f 100%);
+      color: white;
+    }
+    .header-site h1 { margin: 0; font-size: 2.2rem; text-transform: uppercase; }
+
+    .nav-bar {
+      background: #fff;
+      padding: 10px 25px;
+      display: flex;
+      justify-content: space-between; /* Espaça os itens para as pontas */
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-group { display: flex; gap: 10px; }
+
+    .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+    .search-box {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+      display: flex; gap: 10px;
+    }
+    .search-box input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; }
+
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    th { background: var(--primary); color: white; padding: 15px; text-align: left; }
+    td { padding: 15px; border-bottom: 1px solid #eee; }
+
+    .row-prod { background-color: #f8f9fa; font-weight: bold; color: var(--primary); }
+    .indent { padding-left: 40px; color: #555; }
+
+    /* Botões */
+    .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.9rem; }
+    .btn-add { background: var(--primary); color: white; }
+    .btn-in { background: var(--success); color: white; }
+    .btn-out { background: var(--danger); color: white; }
+    .btn-exit { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    .btn-exit:hover { background: var(--danger); color: white; }
+    .btn-edit { background: var(--warning); color: white; padding: 5px 10px; font-size: 0.8rem; }
+    .btn-del { background: #eee; color: #666; padding: 5px 10px; font-size: 0.8rem; }
+    .btn-del:hover { background: var(--danger); color: white; }
+
+    /* Modal */
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal-content {
+      background: white; padding: 30px; border-radius: 15px; width: 100%; max-width: 450px;
+    }
+    .modal-content input, .modal-content select { 
+      width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;
+    }
+    .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <header class="header-site">
+    <h1>Controle de Estoque</h1>
+    <p>Assistência Simonetti - Gestão de Volumes</p>
+  </header>
+
+  <nav class="nav-bar">
+    <div class="nav-group">
+      <button class="btn btn-add" onclick="location.href='dashboard.html'">Início</button>
+      <button class="btn btn-add" id="btnNovoProd">📦 Novo Produto</button>
+      <button class="btn" style="background: var(--gray); color:white;" onclick="location.href='historico.html'">📜 Histórico</button>
+    </div>
+    
+    <button class="btn btn-exit" id="btnSair">Sair da Conta</button>
+  </nav>
+
+  <div class="container">
+    <div class="search-box">
+      <input type="text" id="mainBusca" placeholder="Pesquisar por SKU, Produto ou Volume..." onkeyup="filtrar()">
+    </div>
+
+    <table id="tabelaProdutos">
+      <thead>
+        <tr>
+          <th>Código / Descrição</th>
+          <th>Quantidade</th>
+          <th>Status / Tempo</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        </tbody>
+    </table>
+  </div>
+
+  <div id="modalGlobal" class="modal">
+    <div class="modal-content">
+      <h3 id="modalTitulo">Cadastrar</h3>
+      <div id="modalBody">
+        </div>
+      <div class="modal-footer">
+        <button class="btn" style="background:#eee;" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-add" id="mConfirmar">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="produtos.js"></script>
+
+  <script>
+    // 1. Lógica de Busca Visual
+    function filtrar() {
+      const termo = document.getElementById("mainBusca").value.toLowerCase();
+      const linhas = document.querySelectorAll("#tabelaProdutos tbody tr");
+      
+      linhas.forEach(linha => {
+        const texto = linha.innerText.toLowerCase();
+        linha.style.display = texto.includes(termo) ? "" : "none";
+      });
+    }
+
+    // 2. Controle do Modal (Funções que o produtos.js vai chamar)
+    window.abrirModal = (titulo, html, acao) => {
+      document.getElementById("modalTitulo").innerText = titulo;
+      document.getElementById("modalBody").innerHTML = html;
+      document.getElementById("mConfirmar").onclick = acao;
+      document.getElementById("modalGlobal").style.display = "flex";
+    };
+
+    window.fecharModal = () => {
+      document.getElementById("modalGlobal").style.display = "none";
+    };
+  </script>
+</body>
+</html>
