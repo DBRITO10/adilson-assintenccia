@@ -1,125 +1,173 @@
-import { db } from './firebase-config.js'; 
-import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    onSnapshot, 
-    query, 
-    orderBy, 
-    doc, 
-    updateDoc, 
-    arrayUnion 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-const produtosCol = collection(db, "produtos");
-const fornecedoresCol = collection(db, "fornecedores");
-
-// --- 1. CARREGAR FORNECEDORES (Busca CNPJ e Nome) ---
-async function carregarFornecedores() {
-    const select = document.getElementById('selectForn');
-    const snapshot = await getDocs(fornecedoresCol);
-    
-    select.innerHTML = '<option value="">Selecione uma Fábrica...</option>';
-    snapshot.forEach(docSnap => {
-        const forn = docSnap.data();
-        // Usamos o CNPJ no value e o Nome no texto
-        select.innerHTML += `<option value="${forn.cnpj}">${forn.nome} (${forn.cnpj})</option>`;
-    });
-}
-
-// --- 2. LISTAR PRODUTOS (Real-time) ---
-function listarProdutos() {
-    const q = query(produtosCol, orderBy("sku", "asc"));
-    
-    onSnapshot(q, (snapshot) => {
-        const corpoTabela = document.getElementById('corpoTabela');
-        corpoTabela.innerHTML = '';
-
-        snapshot.forEach(docSnap => {
-            const prod = docSnap.data();
-            const id = docSnap.id;
-
-            // Linha Principal
-            const tr = document.createElement('tr');
-            tr.className = 'row-produto';
-            tr.innerHTML = `
-                <td>${prod.sku} - ${prod.nome}</td>
-                <td><span class="badge-forn">${prod.fornecedorNome || 'N/A'}</span></td>
-                <td>${prod.volumes ? prod.volumes.length : 0} Vol.</td>
-                <td>
-                    <button class="btn-action btn-vol" onclick="abrirModal('${id}', '${prod.nome}')">+ Volume</button>
-                </td>
-            `;
-            corpoTabela.appendChild(tr);
-
-            // Sub-linhas de Volumes
-            if (prod.volumes && prod.volumes.length > 0) {
-                prod.volumes.forEach(vol => {
-                    const trVol = document.createElement('tr');
-                    trVol.className = 'row-volume';
-                    trVol.innerHTML = `
-                        <td class="indent">${vol}</td>
-                        <td colspan="3"></td>
-                    `;
-                    corpoTabela.appendChild(trVol);
-                });
-            }
-        });
-    });
-}
-
-// --- 3. CADASTRAR PRODUTO ---
-document.getElementById('btnSalvarProd').addEventListener('click', async () => {
-    const sku = document.getElementById('newSku').value;
-    const nome = document.getElementById('newNome').value;
-    const select = document.getElementById('selectForn');
-    const cnpj = select.value;
-    const nomeForn = select.options[select.selectedIndex].text.split(' (')[0]; // Pega só o nome antes do CNPJ
-
-    if (!sku || !nome || !cnpj) return alert("Preencha tudo!");
-
-    await addDoc(produtosCol, {
-        sku,
-        nome,
-        fornecedorCnpj: cnpj,
-        fornecedorNome: nomeForn,
-        volumes: [],
-        criadoEm: new Date()
-    });
-
-    document.getElementById('newSku').value = '';
-    document.getElementById('newNome').value = '';
-});
-
-// --- 4. SALVAR VOLUME (DENTRO DO PRODUTO) ---
-document.getElementById('btnSalvarVol').addEventListener('click', async (e) => {
-    const idProd = e.target.dataset.idProd;
-    const descVol = document.getElementById('volDesc').value;
-
-    if (!descVol) return alert("Digite a descrição do volume!");
-
-    try {
-        const docRef = doc(db, "produtos", idProd);
-        // O arrayUnion adiciona o item ao array sem duplicar e sem apagar o que já existe
-        await updateDoc(docRef, {
-            volumes: arrayUnion(descVol)
-        });
-
-        document.getElementById('volDesc').value = '';
-        fecharModal();
-    } catch (err) {
-        console.error("Erro ao adicionar volume:", err);
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simonetti - Cadastro de Produtos</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --primary: #004a99;
+      --secondary: #002d5f;
+      --success: #28a745;
+      --bg-light: #f8f9fa;
     }
-});
 
-// Inicialização
-window.onload = () => {
-    carregarFornecedores();
-    listarProdutos();
-};
+    /* Estilização da Seção de Cadastro */
+    .cadastro-container {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
 
-window.abrirModal = (id, nome) => {
-    document.getElementById('modalVol').style.display = 'flex';
-    document.getElementById('nomeProdPai').innerText = `Produto: ${nome}`;
-    document.getElementById('btnSalvarVol').dataset.idProd = id;
-};
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1.5fr auto;
+      gap: 15px;
+      align-items: end;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-weight: 600; color: var(--secondary); font-size: 0.9rem; }
+    
+    input, select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    .btn-save {
+      background: var(--primary);
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .btn-save:hover { background: var(--secondary); }
+
+    /* Estilo da Tabela de Exibição */
+    .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--secondary); color: white; padding: 15px; text-align: left; }
+    td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+
+    .badge-fornecedor {
+      background: #e1ecf7;
+      color: var(--primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .btn-vol {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <h2>Móveis Simonetti - Cadastro de Estoque</h2>
+    <div class="nav-buttons">
+      <button onclick="location.href='dashboard.html'" style="background: rgba(255,255,255,0.2);">Painel Principal</button>
+      <button id="btnSair" style="background: #dc3545;">Sair</button>
+    </div>
+  </div>
+
+  <div class="content">
+    
+    <div class="cadastro-container">
+      <h3 style="margin-top: 0; color: var(--primary);">📦 Cadastrar Novo Produto</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Código (SKU)</label>
+          <input type="text" id="prodCodigo" placeholder="Ex: 102030">
+        </div>
+        <div class="form-group">
+          <label>Descrição do Produto</label>
+          <input type="text" id="prodNome" placeholder="Ex: Roupeiro 6 Portas">
+        </div>
+        <div class="form-group">
+          <label>Fábrica (Fornecedor)</label>
+          <select id="prodFornecedor">
+            <option value="">Selecione o Fornecedor...</option>
+            </select>
+        </div>
+        <button class="btn-save" id="btnSalvarProduto">Adicionar Produto</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <input type="text" id="inputBusca" placeholder="🔍 Buscar por código ou nome..." onkeyup="filtrarProdutos()" style="width: 100%; max-width: 400px;">
+    </div>
+
+    <div class="table-container">
+      <table id="tabelaProdutos">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th>Fábrica</th>
+            <th>Volumes</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela">
+          </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div id="modalVolume" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:white; padding:30px; border-radius:10px; width:400px;">
+      <h3 id="modalTitulo">Adicionar Volume</h3>
+      <div class="form-group">
+        <label>Descrição do Volume</label>
+        <input type="text" id="volDesc" placeholder="Ex: Volume 1/3 - Lateral">
+      </div>
+      <div class="form-group" style="margin-top:15px;">
+        <label>Quantidade Inicial</label>
+        <input type="number" id="volQtd" value="1">
+      </div>
+      <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="fecharModal()" style="background:#eee; border:none; padding:10px; cursor:pointer;">Cancelar</button>
+        <button id="btnConfirmarVolume" class="btn-save">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/produtos.js"></script>
+  
+  <script>
+    // Função simples de busca na tabela
+    function filtrarProdutos() {
+      const termo = document.getElementById("inputBusca").value.toLowerCase();
+      const linhas = document.querySelectorAll("#corpoTabela tr");
+      linhas.forEach(linha => {
+        const texto = linha.innerText.toLowerCase();
+        linha.style.display = texto.includes(termo) ? "" : "none";
+      });
+    }
+
+    function fecharModal() {
+      document.getElementById("modalVolume").style.display = "none";
+    }
+  </script>
+
+</body>
+</html>
