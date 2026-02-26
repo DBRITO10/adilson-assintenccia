@@ -1,160 +1,137 @@
-import { db, auth } from "./firebase-config.js";
+import { db } from "./firebase-config.js";
 import { 
-    collection, 
-    addDoc, 
-    getDocs, 
-    serverTimestamp, 
-    doc, 
-    updateDoc, 
-    increment, 
-    query, 
-    orderBy 
+    collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy 
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-// --- 1. FUNÇÕES DE INICIALIZAÇÃO E LISTAGEM ---
-
-async function listarProdutos() {
-    const corpoTabela = document.querySelector("#tabelaProdutos tbody");
-    if (!corpoTabela) return;
-
-    corpoTabela.innerHTML = "<tr><td colspan='4'>Carregando estoque...</td></tr>";
-
-    try {
-        // Busca Produtos e Volumes
-        const prodSnap = await getDocs(query(collection(db, "produtos"), orderBy("nome", "asc")));
-        const volSnap = await getDocs(collection(db, "volumes"));
-        
-        const listaVolumes = volSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        corpoTabela.innerHTML = "";
-
-        prodSnap.forEach(docP => {
-            const p = docP.data();
-            const idProd = docP.id;
-
-            // Linha do Produto Principal (Fundo cinza claro)
-            corpoTabela.innerHTML += `
-                <tr style="background-color: #f0f2f5; font-weight: bold;">
-                    <td>[${p.codigo}] ${p.nome}</td>
-                    <td>--</td>
-                    <td>--</td>
-                    <td>
-                        <button onclick="window.abrirModalVolume('${idProd}', '${p.nome}')" style="background:#28a745">+ Volume</button>
-                    </td>
-                </tr>
-            `;
-
-            // Filtra e exibe os volumes vinculados a este produto
-            const volumesFiltrados = listaVolumes.filter(v => v.produtoId === idProd);
-
-            volumesFiltrados.forEach(v => {
-                const dias = calcularDiasParado(v.ultimaMovimentacao);
-                const classeStatus = dias > 30 ? 'status-ocioso' : 'status-bom';
-
-                corpoTabela.innerHTML += `
-                    <tr class="sub-item">
-                        <td class="indent">↳ ${v.descricao}</td>
-                        <td><strong>${v.quantidade}</strong> un</td>
-                        <td class="${classeStatus}">${dias} dias em estoque</td>
-                        <td>
-                            <button onclick="window.movimentarVolume('${v.id}', '${v.descricao}', 'Entrada')" style="background:#007bff; padding:5px">▲</button>
-                            <button onclick="window.movimentarVolume('${v.id}', '${v.descricao}', 'Saída')" style="background:#dc3545; padding:5px">▼ Saída</button>
-                        </td>
-                    </tr>
-                `;
-            });
-        });
-
-    } catch (e) {
-        console.error("Erro ao listar:", e);
-        corpoTabela.innerHTML = "<tr><td colspan='4'>Erro ao carregar dados.</td></tr>";
-    }
+// 1. Carregar Fornecedores no Select ao iniciar
+async function carregarFornecedores() {
+    const select = document.getElementById("selectForn");
+    const snap = await getDocs(collection(db, "fornecedores"));
+    
+    select.innerHTML = '<option value="">Selecione a Fábrica...</option>';
+    snap.forEach(d => {
+        const f = d.data();
+        select.innerHTML += `<option value="${d.id}">${f.nome}</option>`;
+    });
 }
 
-// --- 2. FUNÇÕES DE CADASTRO ---
+// 2. Salvar Produto Principal
+document.getElementById("btnSalvarProd").onclick = async () => {
+    const sku = document.getElementById("newSku").value;
+    const nome = document.getElementById("newNome").value;
+    const fornecedorId = document.getElementById("selectForn").value;
 
-window.salvarProduto = async () => {
-    const nome = document.getElementById("nome").value;
-    const cod = document.getElementById("cod").value;
-    const fornecedorId = document.getElementById("selectFornecedor").value;
-
-    if (!nome || !fornecedorId) {
-        alert("Nome e Fornecedor são obrigatórios!");
+    if (!sku || !nome || !fornecedorId) {
+        alert("Preencha todos os campos e selecione uma fábrica!");
         return;
     }
 
     try {
         await addDoc(collection(db, "produtos"), {
-            nome,
-            codigo: cod || "S/C",
-            fornecedorId,
-            dataCadastro: serverTimestamp()
+            codigo: sku,
+            nome: nome,
+            fornecedorId: fornecedorId,
+            dataCadastro: new Date()
         });
-        alert("Produto cadastrado!");
-        location.reload();
+        alert("Produto cadastrado com sucesso!");
+        location.reload(); 
     } catch (e) {
-        alert("Erro ao salvar: " + e.message);
+        console.error("Erro ao salvar: ", e);
     }
 };
 
-window.abrirModalVolume = async (idProd, nomeProd) => {
-    const desc = prompt(`Qual a descrição do volume para ${nomeProd}? (Ex: Volume 1/2 - Tampo)`);
-    const qtd = prompt(`Quantidade inicial em estoque:`);
+// 3. Listar Produtos e Seus Volumes (Para busca e consulta)
+async function listarEstrutura() {
+    const corpo = document.getElementById("corpoTabela");
+    corpo.innerHTML = "<tr><td colspan='4'>Carregando estrutura...</td></tr>";
 
-    if (desc && qtd) {
-        await addDoc(collection(db, "volumes"), {
-            produtoId: idProd,
-            descricao: desc,
-            quantidade: parseInt(qtd),
-            ultimaMovimentacao: serverTimestamp()
+    const prodSnap = await getDocs(query(collection(db, "produtos"), orderBy("nome", "asc")));
+    const volSnap = await getDocs(collection(db, "volumes"));
+    const fornSnap = await getDocs(collection(db, "fornecedores"));
+
+    // Mapear fornecedores para acesso rápido pelo ID
+    const listaForn = {};
+    fornSnap.forEach(d => listaForn[d.id] = d.data().nome);
+
+    const listaVolumes = volSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    corpo.innerHTML = "";
+
+    prodSnap.forEach(docP => {
+        const p = docP.data();
+        const idP = docP.id;
+        const nomeForn = listaForn[p.fornecedorId] || "Não vinculado";
+
+        // Linha do Produto Pai
+        corpo.innerHTML += `
+            <tr class="row-produto">
+                <td>[${p.codigo}] ${p.nome}</td>
+                <td><span class="badge-forn">${nomeForn}</span></td>
+                <td>---</td>
+                <td>
+                    <button class="btn-action btn-edit" onclick="editarProduto('${idP}', '${p.nome}')">✏️ Editar</button>
+                    <button class="btn-action btn-vol" onclick="abrirModalVolume('${idP}', '${p.nome}')">+ Volume</button>
+                </td>
+            </tr>
+        `;
+
+        // Filtrar e mostrar volumes deste produto
+        const volumesDesteProd = listaVolumes.filter(v => v.produtoId === idP);
+        volumesDesteProd.forEach(v => {
+            corpo.innerHTML += `
+                <tr class="row-volume">
+                    <td class="indent">${v.descricao}</td>
+                    <td>---</td>
+                    <td>Item cadastrado</td>
+                    <td>
+                        <button class="btn-action" style="background:#ddd" onclick="editarVolume('${v.id}', '${v.descricao}')">Editar Vol.</button>
+                    </td>
+                </tr>
+            `;
         });
-        alert("Volume adicionado ao pulmão!");
-        listarProdutos();
-    }
-};
-
-// --- 3. MOVIMENTAÇÃO DE ESTOQUE (GIRO AUTOMÁTICO) ---
-
-window.movimentarVolume = async (idVol, descVol, tipo) => {
-    const qtd = prompt(`Quantidade de ${tipo}:`);
-    if (!qtd || isNaN(qtd)) return;
-
-    try {
-        const volRef = doc(db, "volumes", idVol);
-        const valorAjuste = tipo === "Saída" ? -parseInt(qtd) : parseInt(qtd);
-
-        // Atualiza o estoque no Volume
-        await updateDoc(volRef, {
-            quantidade: increment(valorAjuste),
-            ultimaMovimentacao: serverTimestamp()
-        });
-
-        // GRAVA AUTOMATICAMENTE NO HISTÓRICO DE GIRO
-        await addDoc(collection(db, "movimentacoes"), {
-            produto: descVol,
-            tipo: tipo,
-            quantidade: parseInt(qtd),
-            usuario: auth.currentUser.email,
-            data: serverTimestamp()
-        });
-
-        alert(`${tipo} realizada com sucesso!`);
-        listarProdutos();
-    } catch (e) {
-        alert("Erro na movimentação: " + e.message);
-    }
-};
-
-// --- 4. UTILITÁRIOS ---
-
-function calcularDiasParado(timestamp) {
-    if (!timestamp) return 0;
-    const dataMov = timestamp.toDate();
-    const hoje = new Date();
-    const diff = Math.floor((hoje - dataMov) / (1000 * 60 * 60 * 24));
-    return diff;
+    });
 }
 
-// Inicialização ao carregar a página
-window.onload = () => {
-    listarProdutos();
+// 4. Lógica do Modal de Volumes
+window.abrirModalVolume = (id, nome) => {
+    window.idProdutoAtual = id; // Armazena temporariamente o ID
+    document.getElementById("nomeProdPai").innerText = `Produto: ${nome}`;
+    document.getElementById("modalVol").style.display = "flex";
 };
+
+document.getElementById("btnSalvarVol").onclick = async () => {
+    const desc = document.getElementById("volDesc").value;
+    
+    if (!desc) return alert("Digite a descrição do volume!");
+
+    await addDoc(collection(db, "volumes"), {
+        produtoId: window.idProdutoAtual,
+        descricao: desc,
+        quantidade: 0, // Inicia zerado, pois a entrada é feita na tela de estoque
+        ultimaMovimentacao: null
+    });
+
+    alert("Volume vinculado!");
+    location.reload();
+};
+
+// Funções de Edição (Exemplos de lógica)
+window.editarProduto = async (id, nomeAntigo) => {
+    const novoNome = prompt("Novo nome do produto:", nomeAntigo);
+    if (novoNome) {
+        await updateDoc(doc(db, "produtos", id), { nome: novoNome });
+        listarEstrutura();
+    }
+};
+
+window.editarVolume = async (id, descAntiga) => {
+    const novaDesc = prompt("Nova descrição do volume:", descAntiga);
+    if (novaDesc) {
+        await updateDoc(doc(db, "volumes", id), { descricao: novaDesc });
+        listarEstrutura();
+    }
+};
+
+// Inicialização
+carregarFornecedores();
+listarEstrutura();
