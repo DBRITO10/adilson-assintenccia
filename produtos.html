@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simonetti - Gestão de Pulmão</title>
+  <title>Simonetti - Gestão de Estoque</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
@@ -12,32 +12,39 @@
       --success: #28a745;
       --warning: #f39c12;
       --gray: #6c757d;
+      --light: #f4f7f6;
     }
 
-    body { background-color: #f4f7f6; margin: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: var(--light); margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
 
+    /* Cabeçalho com Degradê */
     .header-site {
       text-align: center;
-      padding: 30px 0;
+      padding: 30px 0 15px 0;
       background: linear-gradient(135deg, #004a99 0%, #002d5f 100%);
       color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
-    .header-site h1 { margin: 0; font-size: 2.2rem; text-transform: uppercase; }
+    .header-site h1 { margin: 0; font-size: 2.2rem; text-transform: uppercase; letter-spacing: 2px; }
 
+    /* Barra de Navegação */
     .nav-bar {
       background: #fff;
-      padding: 10px 20px;
+      padding: 10px 25px;
       display: flex;
-      justify-content: center;
-      gap: 15px;
+      justify-content: space-between; /* Botões na esquerda, Sair na direita */
+      align-items: center;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       position: sticky;
       top: 0;
       z-index: 100;
     }
 
+    .nav-left { display: flex; gap: 10px; }
+
     .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
 
+    /* Caixa de Pesquisa */
     .search-box {
       background: white;
       padding: 20px;
@@ -47,65 +54,78 @@
       display: flex;
       gap: 10px;
     }
+    .search-box input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.3s; }
+    .search-box input:focus { border-color: var(--primary); }
 
-    .search-box input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; }
-
+    /* Tabela de Produtos */
     table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-    th { background: var(--primary); color: white; padding: 15px; text-align: left; }
+    th { background: var(--primary); color: white; padding: 15px; text-align: left; font-size: 0.9rem; text-transform: uppercase; }
     td { padding: 15px; border-bottom: 1px solid #eee; }
 
     .row-prod { background-color: #f8f9fa; font-weight: bold; color: var(--primary); }
     .row-vol { font-size: 0.95rem; }
     .indent { padding-left: 40px; color: #555; }
 
-    /* Tags de Status */
-    .status-tag { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+    /* Botões */
+    .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+    .btn-add { background: var(--primary); color: white; }
+    .btn-in { background: var(--success); color: white; }
+    .btn-out { background: var(--danger); color: white; }
+    .btn-edit { background: var(--warning); color: white; padding: 5px 10px; }
+    .btn-del { background: #f1f1f1; color: #555; padding: 5px 10px; }
+    .btn-del:hover { background: var(--danger); color: white; }
+    
+    .btn-exit { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+    .btn-exit:hover { background: var(--danger); color: white; }
+
+    /* Status */
+    .status-tag { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
     .status-bom { background: #e8f5e9; color: var(--success); }
     .status-ocioso { background: #ffebee; color: var(--danger); }
 
-    /* Botões */
-    .btn { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-    .btn-add { background: var(--primary); color: white; }
-    .btn-in { background: var(--success); color: white; margin-right: 5px; }
-    .btn-out { background: var(--danger); color: white; }
-
-    /* Modal Estilizado */
+    /* Modal */
     .modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000;
     }
     .modal-content {
-      background: white; padding: 30px; border-radius: 15px; width: 100%; max-width: 450px;
+      background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.3);
     }
-    .modal-content h3 { margin-top: 0; color: var(--primary); }
-    .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-content h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    .modal-body label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.9rem; }
+    .modal-body input, .modal-body select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+    .modal-footer { margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
   </style>
 </head>
 <body>
 
   <header class="header-site">
     <h1>Assistência Simonetti</h1>
-    <p>Gestão de Estoque e Pulmão de Fábrica</p>
+    <p>Gestão de Pulmão de Fábrica e Volumes</p>
   </header>
 
   <nav class="nav-bar">
-    <button class="btn btn-add" onclick="location.href='dashboard.html'">Página Inicial</button>
-    <button class="btn btn-add" onclick="abrirModalCadastro()">📦 Novo Produto</button>
-    <button class="btn btn-add" onclick="location.href='historico.html'" style="background: var(--gray);">📜 Ver Histórico</button>
+    <div class="nav-left">
+      <button class="btn btn-add" onclick="location.href='dashboard.html'">🏠 Início</button>
+      <button class="btn btn-add" id="btnNovoProduto">📦 Novo Produto</button>
+      <button class="btn" style="background: var(--gray); color: white;" onclick="location.href='historico.html'">📜 Histórico</button>
+    </div>
+    
+    <button class="btn btn-exit" id="btnSair">Sair da Conta</button>
   </nav>
 
   <div class="container">
     <div class="search-box">
-      <input type="text" id="mainBusca" placeholder="Pesquisar por SKU ou Nome do Produto..." onkeyup="filtrar()">
+      <input type="text" id="mainBusca" placeholder="Pesquisar por Código, Produto ou Volume..." onkeyup="filtrar()">
     </div>
 
     <table id="tabelaProdutos">
       <thead>
         <tr>
-          <th>Item / Descrição</th>
-          <th>Quantidade</th>
-          <th>Tempo em Estoque</th>
+          <th>Código / Descrição</th>
+          <th>Qtd em Estoque</th>
+          <th>Tempo / Status</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -117,11 +137,11 @@
   <div id="modalGlobal" class="modal">
     <div class="modal-content">
       <h3 id="modalTitulo">Ação</h3>
-      <div id="modalBody">
+      <div id="modalBody" class="modal-body">
         </div>
       <div class="modal-footer">
-        <button class="btn" style="background:#eee;" onclick="fecharModal()">Cancelar</button>
-        <button class="btn btn-add" id="mConfirmar">Confirmar</button>
+        <button class="btn" style="background:#eee; color:#333;" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-add" id="mConfirmar">Salvar Alterações</button>
       </div>
     </div>
   </div>
@@ -129,25 +149,18 @@
   <script type="module" src="produtos.js"></script>
 
   <script>
-    // Funções de UI integradas para manter a funcionalidade original de busca
+    // Lógica Visual de Filtro
     function filtrar() {
       const termo = document.getElementById("mainBusca").value.toLowerCase();
       const linhas = document.querySelectorAll("#tabelaProdutos tbody tr");
       
       linhas.forEach(linha => {
         const texto = linha.innerText.toLowerCase();
-        // Lógica simples: se o termo está na linha, mostra
-        if (texto.includes(termo)) {
-          linha.style.display = "";
-        } else {
-          // Se for um volume (sub-item), e o pai dele estiver visível, talvez queira mostrar
-          // mas para facilitar, o filtro por texto direto resolve a maioria dos casos
-          linha.style.display = "none";
-        }
+        linha.style.display = texto.includes(termo) ? "" : "none";
       });
     }
 
-    // Modal Global
+    // Funções de controle do Modal (Acessíveis pelo produtos.js)
     window.abrirModal = (titulo, html, acao) => {
       document.getElementById("modalTitulo").innerText = titulo;
       document.getElementById("modalBody").innerHTML = html;
@@ -158,6 +171,12 @@
     window.fecharModal = () => {
       document.getElementById("modalGlobal").style.display = "none";
     };
+
+    // Fechar modal ao clicar fora dele
+    window.onclick = (event) => {
+      const modal = document.getElementById("modalGlobal");
+      if (event.target == modal) fecharModal();
+    }
   </script>
 </body>
 </html>
