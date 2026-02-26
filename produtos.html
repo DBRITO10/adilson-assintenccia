@@ -3,180 +3,171 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simonetti - Gestão de Estoque</title>
+  <title>Simonetti - Cadastro de Produtos</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
       --primary: #004a99;
-      --danger: #dc3545;
+      --secondary: #002d5f;
       --success: #28a745;
-      --warning: #f39c12;
-      --gray: #6c757d;
-      --light: #f4f7f6;
+      --bg-light: #f8f9fa;
     }
 
-    body { background-color: var(--light); margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
-
-    /* Cabeçalho com Degradê */
-    .header-site {
-      text-align: center;
-      padding: 30px 0 15px 0;
-      background: linear-gradient(135deg, #004a99 0%, #002d5f 100%);
-      color: white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    }
-    .header-site h1 { margin: 0; font-size: 2.2rem; text-transform: uppercase; letter-spacing: 2px; }
-
-    /* Barra de Navegação */
-    .nav-bar {
-      background: #fff;
-      padding: 10px 25px;
-      display: flex;
-      justify-content: space-between; /* Botões na esquerda, Sair na direita */
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .nav-left { display: flex; gap: 10px; }
-
-    .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
-
-    /* Caixa de Pesquisa */
-    .search-box {
+    /* Estilização da Seção de Cadastro */
+    .cadastro-container {
       background: white;
-      padding: 20px;
+      padding: 25px;
       border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-      margin-bottom: 25px;
-      display: flex;
-      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
     }
-    .search-box input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 8px; font-size: 1rem; outline: none; transition: 0.3s; }
-    .search-box input:focus { border-color: var(--primary); }
 
-    /* Tabela de Produtos */
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-    th { background: var(--primary); color: white; padding: 15px; text-align: left; font-size: 0.9rem; text-transform: uppercase; }
-    td { padding: 15px; border-bottom: 1px solid #eee; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1.5fr auto;
+      gap: 15px;
+      align-items: end;
+    }
 
-    .row-prod { background-color: #f8f9fa; font-weight: bold; color: var(--primary); }
-    .row-vol { font-size: 0.95rem; }
-    .indent { padding-left: 40px; color: #555; }
-
-    /* Botões */
-    .btn { border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
-    .btn-add { background: var(--primary); color: white; }
-    .btn-in { background: var(--success); color: white; }
-    .btn-out { background: var(--danger); color: white; }
-    .btn-edit { background: var(--warning); color: white; padding: 5px 10px; }
-    .btn-del { background: #f1f1f1; color: #555; padding: 5px 10px; }
-    .btn-del:hover { background: var(--danger); color: white; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-weight: 600; color: var(--secondary); font-size: 0.9rem; }
     
-    .btn-exit { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
-    .btn-exit:hover { background: var(--danger); color: white; }
-
-    /* Status */
-    .status-tag { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
-    .status-bom { background: #e8f5e9; color: var(--success); }
-    .status-ocioso { background: #ffebee; color: var(--danger); }
-
-    /* Modal */
-    .modal {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000;
+    input, select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
     }
-    .modal-content {
-      background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+
+    .btn-save {
+      background: var(--primary);
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
     }
-    .modal-content h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #eee; padding-bottom: 10px; }
-    .modal-body label { display: block; margin-top: 15px; font-weight: bold; font-size: 0.9rem; }
-    .modal-body input, .modal-body select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-    .modal-footer { margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px; }
+
+    .btn-save:hover { background: var(--secondary); }
+
+    /* Estilo da Tabela de Exibição */
+    .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--secondary); color: white; padding: 15px; text-align: left; }
+    td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+
+    .badge-fornecedor {
+      background: #e1ecf7;
+      color: var(--primary);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .btn-vol {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
-  <header class="header-site">
-    <h1>Assistência Simonetti</h1>
-    <p>Gestão de Pulmão de Fábrica e Volumes</p>
-  </header>
-
-  <nav class="nav-bar">
-    <div class="nav-left">
-      <button class="btn btn-add" onclick="location.href='dashboard.html'">🏠 Início</button>
-      <button class="btn btn-add" id="btnNovoProduto">📦 Novo Produto</button>
-      <button class="btn" style="background: var(--gray); color: white;" onclick="location.href='historico.html'">📜 Histórico</button>
+  <div class="navbar">
+    <h2>Móveis Simonetti - Cadastro de Estoque</h2>
+    <div class="nav-buttons">
+      <button onclick="location.href='dashboard.html'" style="background: rgba(255,255,255,0.2);">Painel Principal</button>
+      <button id="btnSair" style="background: #dc3545;">Sair</button>
     </div>
-    
-    <button class="btn btn-exit" id="btnSair">Sair da Conta</button>
-  </nav>
-
-  <div class="container">
-    <div class="search-box">
-      <input type="text" id="mainBusca" placeholder="Pesquisar por Código, Produto ou Volume..." onkeyup="filtrar()">
-    </div>
-
-    <table id="tabelaProdutos">
-      <thead>
-        <tr>
-          <th>Código / Descrição</th>
-          <th>Qtd em Estoque</th>
-          <th>Tempo / Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        </tbody>
-    </table>
   </div>
 
-  <div id="modalGlobal" class="modal">
-    <div class="modal-content">
-      <h3 id="modalTitulo">Ação</h3>
-      <div id="modalBody" class="modal-body">
+  <div class="content">
+    
+    <div class="cadastro-container">
+      <h3 style="margin-top: 0; color: var(--primary);">📦 Cadastrar Novo Produto</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Código (SKU)</label>
+          <input type="text" id="prodCodigo" placeholder="Ex: 102030">
         </div>
-      <div class="modal-footer">
-        <button class="btn" style="background:#eee; color:#333;" onclick="fecharModal()">Cancelar</button>
-        <button class="btn btn-add" id="mConfirmar">Salvar Alterações</button>
+        <div class="form-group">
+          <label>Descrição do Produto</label>
+          <input type="text" id="prodNome" placeholder="Ex: Roupeiro 6 Portas">
+        </div>
+        <div class="form-group">
+          <label>Fábrica (Fornecedor)</label>
+          <select id="prodFornecedor">
+            <option value="">Selecione o Fornecedor...</option>
+            </select>
+        </div>
+        <button class="btn-save" id="btnSalvarProduto">Adicionar Produto</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 15px;">
+      <input type="text" id="inputBusca" placeholder="🔍 Buscar por código ou nome..." onkeyup="filtrarProdutos()" style="width: 100%; max-width: 400px;">
+    </div>
+
+    <div class="table-container">
+      <table id="tabelaProdutos">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Produto</th>
+            <th>Fábrica</th>
+            <th>Volumes</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela">
+          </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div id="modalVolume" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div style="background:white; padding:30px; border-radius:10px; width:400px;">
+      <h3 id="modalTitulo">Adicionar Volume</h3>
+      <div class="form-group">
+        <label>Descrição do Volume</label>
+        <input type="text" id="volDesc" placeholder="Ex: Volume 1/3 - Lateral">
+      </div>
+      <div class="form-group" style="margin-top:15px;">
+        <label>Quantidade Inicial</label>
+        <input type="number" id="volQtd" value="1">
+      </div>
+      <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="fecharModal()" style="background:#eee; border:none; padding:10px; cursor:pointer;">Cancelar</button>
+        <button id="btnConfirmarVolume" class="btn-save">Confirmar</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="produtos.js"></script>
-
+  <script type="module" src="js/produtos.js"></script>
+  
   <script>
-    // Lógica Visual de Filtro
-    function filtrar() {
-      const termo = document.getElementById("mainBusca").value.toLowerCase();
-      const linhas = document.querySelectorAll("#tabelaProdutos tbody tr");
-      
+    // Função simples de busca na tabela
+    function filtrarProdutos() {
+      const termo = document.getElementById("inputBusca").value.toLowerCase();
+      const linhas = document.querySelectorAll("#corpoTabela tr");
       linhas.forEach(linha => {
         const texto = linha.innerText.toLowerCase();
         linha.style.display = texto.includes(termo) ? "" : "none";
       });
     }
 
-    // Funções de controle do Modal (Acessíveis pelo produtos.js)
-    window.abrirModal = (titulo, html, acao) => {
-      document.getElementById("modalTitulo").innerText = titulo;
-      document.getElementById("modalBody").innerHTML = html;
-      document.getElementById("mConfirmar").onclick = acao;
-      document.getElementById("modalGlobal").style.display = "flex";
-    };
-
-    window.fecharModal = () => {
-      document.getElementById("modalGlobal").style.display = "none";
-    };
-
-    // Fechar modal ao clicar fora dele
-    window.onclick = (event) => {
-      const modal = document.getElementById("modalGlobal");
-      if (event.target == modal) fecharModal();
+    function fecharModal() {
+      document.getElementById("modalVolume").style.display = "none";
     }
   </script>
+
 </body>
 </html>
