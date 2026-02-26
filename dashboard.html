@@ -2,25 +2,306 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Simonetti</title>
-    <link rel="stylesheet" href="css/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistência SM - Sistema Integrado</title>
+    <style>
+        :root { --primary: #004a99; --secondary: #007bff; --success: #28a745; --danger: #dc3545; --gray: #6c757d; --light: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--light); margin: 0; padding: 0; }
+        
+        /* Navbar */
+        .navbar { background: var(--primary); color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav-buttons button { background: rgba(255,255,255,0.2); border: 1px solid white; margin-left: 5px; }
+        
+        /* Layout */
+        .content { padding: 30px; max-width: 1200px; margin: auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Cards e Forms */
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select { padding: 10px; margin: 5px 0; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; background: var(--secondary); color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
+
+        /* Tabelas */
+        table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: var(--primary); color: white; }
+        .sub-item { background-color: #f9f9f9 !important; font-size: 0.9em; }
+        .indent { padding-left: 30px; color: #555; }
+        
+        /* Status */
+        .status-ocioso { color: var(--danger); font-weight: bold; }
+        .status-bom { color: var(--success); }
+        .tipo-Entrada { color: var(--success); font-weight: bold; }
+        .tipo-Saída { color: var(--danger); font-weight: bold; }
+
+        /* Dashboard Grid */
+        .grid-dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .btn-dash { height: 120px; font-size: 1.1em; display: flex; align-items: center; justify-content: center; text-decoration: none; border-radius: 12px; }
+    </style>
 </head>
 <body>
+
     <div class="navbar">
-        <h2>Móveis Simonetti - Assistência</h2>
-        <button id="btnLogout">Sair</button>
+        <h2 onclick="showPage('dash')" style="cursor:pointer">Móveis Simonetti - Assistência</h2>
+        <div class="nav-buttons">
+            <button onclick="showPage('produtos')">Estoque</button>
+            <button onclick="showPage('fornecedores')">Fornecedores</button>
+            <button onclick="showPage('historico')">Histórico</button>
+            <button onclick="logout()" style="background: var(--danger);">Sair</button>
+        </div>
     </div>
-    <div class="content" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-        <button onclick="location.href='produtos.html'" style="height: 150px; font-size: 1.2em;">📦 Gestão de Estoque / Pulmão</button>
-        <button onclick="location.href='fornecedores.html'" style="height: 150px; font-size: 1.2em; background: #28a745;">🏭 Cadastrar Fornecedores</button>
-        <button onclick="location.href='historico.html'" style="height: 150px; font-size: 1.2em; background: #6c757d;">📜 Histórico de Giro</button>
+
+    <div class="content">
+        
+        <div id="page-dash" class="page active">
+            <h3>Painel de Controle</h3>
+            <div class="grid-dash">
+                <button class="btn-dash" onclick="showPage('produtos')">📦 Gestão de Pulmão</button>
+                <button class="btn-dash" style="background:var(--success)" onclick="showPage('fornecedores')">🏭 Fornecedores</button>
+                <button class="btn-dash" style="background:var(--gray)" onclick="showPage('historico')">📜 Histórico de Giro</button>
+            </div>
+        </div>
+
+        <div id="page-produtos" class="page">
+            <div class="card">
+                <h3>Cadastrar Produto Principal</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="p-cod" placeholder="Código SKU">
+                    <input type="text" id="p-nome" placeholder="Nome do Móvel">
+                    <select id="p-forn"><option value="">Carregando Fornecedores...</option></select>
+                    <button id="btnSalvarProduto">Salvar</button>
+                </div>
+            </div>
+            <table id="tabelaProdutos">
+                <thead>
+                    <tr>
+                        <th>Código / Descrição</th>
+                        <th>Saldo</th>
+                        <th>Status (Dias)</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="page-fornecedores" class="page">
+            <div class="card">
+                <h3>Novo Fornecedor</h3>
+                <input type="text" id="f-nome" placeholder="Nome da Fábrica">
+                <input type="text" id="f-cnpj" placeholder="CNPJ">
+                <button id="btnSalvarForn">Cadastrar Fornecedor</button>
+            </div>
+            <table>
+                <thead><tr><th>Nome</th><th>CNPJ</th><th>Ações</th></tr></thead>
+                <tbody id="listaForn"></tbody>
+            </table>
+        </div>
+
+        <div id="page-historico" class="page">
+            <div class="card" style="display:flex; justify-content: space-between; align-items: center;">
+                <h3>Histórico de Movimentações</h3>
+                <select id="filtroHist" style="width: 200px;">
+                    <option value="Todos">Todos os Tipos</option>
+                    <option value="Entrada">Entradas</option>
+                    <option value="Saída">Saídas</option>
+                </select>
+            </div>
+            <table id="tabelaHist">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Usuário</th>
+                        <th>Produto/Volume</th>
+                        <th>Tipo</th>
+                        <th>Qtd</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
     </div>
 
     <script type="module">
-        import { auth } from "./js/firebase-config.js";
-        document.getElementById("btnLogout").onclick = () => {
-            auth.signOut().then(() => window.location.href = "index.html");
+        import { db, auth } from "./firebase-config.js";
+        import { 
+            collection, addDoc, getDocs, doc, deleteDoc, updateDoc, 
+            query, orderBy, serverTimestamp, increment, onAuthStateChanged, signOut 
+        } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+        // --- NAVEGAÇÃO SPA ---
+        window.showPage = (pageId) => {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            if(pageId === 'produtos') listarProdutos();
+            if(pageId === 'fornecedores') listarFornecedores();
+            if(pageId === 'historico') listarHistorico();
         };
+
+        // --- PROTEÇÃO DE ROTA ---
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = "index.html";
+        });
+
+        window.logout = () => signOut(auth).then(() => window.location.href = "index.html");
+
+        // --- LÓGICA DE FORNECEDORES ---
+        async function listarFornecedores() {
+            const snap = await getDocs(collection(db, "fornecedores"));
+            const tbody = document.getElementById("listaForn");
+            const selectProd = document.getElementById("p-forn");
+            tbody.innerHTML = "";
+            selectProd.innerHTML = '<option value="">Selecione o Fornecedor</option>';
+            
+            snap.forEach(d => {
+                const f = d.data();
+                tbody.innerHTML += `<tr><td>${f.nome}</td><td>${f.cnpj}</td>
+                    <td><button style="background:var(--danger)" onclick="excluirForn('${d.id}')">Excluir</button></td></tr>`;
+                selectProd.innerHTML += `<option value="${f.nome}">${f.nome}</option>`;
+            });
+        }
+
+        document.getElementById("btnSalvarForn").onclick = async () => {
+            const nome = document.getElementById("f-nome").value;
+            const cnpj = document.getElementById("f-cnpj").value;
+            if(!nome) return alert("Nome obrigatório");
+            await addDoc(collection(db, "fornecedores"), { nome, cnpj });
+            listarFornecedores();
+            document.getElementById("f-nome").value = "";
+            document.getElementById("f-cnpj").value = "";
+        };
+
+        window.excluirForn = async (id) => {
+            if(confirm("Excluir fornecedor?")) {
+                await deleteDoc(doc(db, "fornecedores", id));
+                listarFornecedores();
+            }
+        };
+
+        // --- LÓGICA DE PRODUTOS E VOLUMES ---
+        async function listarProdutos() {
+            const corpo = document.querySelector("#tabelaProdutos tbody");
+            corpo.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
+            
+            const prodSnap = await getDocs(query(collection(db, "produtos"), orderBy("nome", "asc")));
+            const volSnap = await getDocs(collection(db, "volumes"));
+            const vols = volSnap.docs.map(d => ({id: d.id, ...d.data()}));
+            
+            corpo.innerHTML = "";
+            prodSnap.forEach(docP => {
+                const p = docP.data();
+                corpo.innerHTML += `
+                    <tr style="background:#eee; font-weight:bold;">
+                        <td>[${p.codigo}] ${p.nome}</td>
+                        <td>--</td><td>--</td>
+                        <td><button onclick="addVolume('${docP.id}', '${p.nome}')">+ Volume</button></td>
+                    </tr>`;
+
+                vols.filter(v => v.produtoId === docP.id).forEach(v => {
+                    const dias = v.ultimaMovimentacao ? Math.floor((new Date() - v.ultimaMovimentacao.toDate())/(1000*60*60*24)) : 0;
+                    corpo.innerHTML += `
+                        <tr class="sub-item">
+                            <td class="indent">↳ ${v.descricao}</td>
+                            <td>${v.quantidade} un</td>
+                            <td class="${dias > 30 ? 'status-ocioso' : 'status-bom'}">${dias} dias parado</td>
+                            <td>
+                                <button onclick="movimentar('${v.id}', '${v.descricao}', 'Entrada')" style="background:var(--success)">⬆</button>
+                                <button onclick="movimentar('${v.id}', '${v.descricao}', 'Saída')" style="background:var(--danger)">⬇</button>
+                            </td>
+                        </tr>`;
+                });
+            });
+        }
+
+        document.getElementById("btnSalvarProduto").onclick = async () => {
+            const codigo = document.getElementById("p-cod").value;
+            const nome = document.getElementById("p-nome").value;
+            const fornecedor = document.getElementById("p-forn").value;
+            if(!codigo || !nome) return alert("Preencha código e nome");
+            await addDoc(collection(db, "produtos"), { codigo, nome, fornecedor });
+            listarProdutos();
+        };
+
+        window.addVolume = async (pId, pNome) => {
+            const desc = prompt(`Descrição do Volume (ex: Lateral Esquerda) para ${pNome}:`);
+            const qtd = prompt("Quantidade inicial:");
+            if(desc && !isNaN(qtd)) {
+                await addDoc(collection(db, "volumes"), {
+                    produtoId: pId,
+                    descricao: desc,
+                    quantidade: parseInt(qtd),
+                    ultimaMovimentacao: serverTimestamp()
+                });
+                listarProdutos();
+            }
+        };
+
+        window.movimentar = async (id, desc, tipo) => {
+            const qtd = prompt(`Quantidade de ${tipo}:`);
+            if(!qtd || isNaN(qtd)) return;
+
+            const volRef = doc(db, "volumes", id);
+            const ajuste = tipo === "Saída" ? -parseInt(qtd) : parseInt(qtd);
+
+            await updateDoc(volRef, {
+                quantidade: increment(ajuste),
+                ultimaMovimentacao: serverTimestamp()
+            });
+
+            await addDoc(collection(db, "movimentacoes"), {
+                produto: desc,
+                tipo: tipo,
+                quantidade: parseInt(qtd),
+                usuario: auth.currentUser.email,
+                data: serverTimestamp()
+            });
+            
+            alert("Operação realizada!");
+            listarProdutos();
+        };
+
+        // --- LÓGICA DE HISTÓRICO ---
+        async function listarHistorico() {
+            const filtro = document.getElementById("filtroHist").value;
+            const tbody = document.querySelector("#tabelaHist tbody");
+            tbody.innerHTML = "<tr><td colspan='6'>Carregando histórico...</td></tr>";
+
+            const q = query(collection(db, "movimentacoes"), orderBy("data", "desc"));
+            const snap = await getDocs(q);
+            tbody.innerHTML = "";
+
+            snap.forEach(d => {
+                const h = d.data();
+                if (filtro === "Todos" || h.tipo === filtro) {
+                    const data = h.data ? h.data.toDate().toLocaleString() : "---";
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${data}</td>
+                            <td>${h.usuario}</td>
+                            <td>${h.produto}</td>
+                            <td class="tipo-${h.tipo}">${h.tipo}</td>
+                            <td>${h.quantidade} un</td>
+                            <td><button style="background:var(--danger)" onclick="excluirHist('${d.id}')">Excluir</button></td>
+                        </tr>`;
+                }
+            });
+        }
+
+        window.excluirHist = async (id) => {
+            if(confirm("Remover este registro?")) {
+                await deleteDoc(doc(db, "movimentacoes", id));
+                listarHistorico();
+            }
+        };
+
+        document.getElementById("filtroHist").onchange = listarHistorico;
+
+        // Iniciar no Dashboard
+        listarFornecedores();
     </script>
 </body>
 </html>
