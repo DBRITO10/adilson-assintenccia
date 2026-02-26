@@ -3,127 +3,129 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simonetti - Cadastro de Produtos</title>
+  <title>Simonetti - Gestão de Cadastros</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
       --primary: #004a99;
       --secondary: #002d5f;
-      --success: #28a745;
-      --bg-light: #f8f9fa;
+      --accent: #f39c12;
+      --light-gray: #f8f9fa;
     }
 
-    /* Estilização da Seção de Cadastro */
-    .cadastro-container {
+    body { background-color: #f4f7f6; }
+
+    /* Estilo do Card de Cadastro */
+    .card-cadastro {
       background: white;
       padding: 25px;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
       margin-bottom: 30px;
     }
 
-    .form-grid {
+    .form-row {
       display: grid;
       grid-template-columns: 1fr 2fr 1.5fr auto;
       gap: 15px;
       align-items: end;
     }
 
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group label { font-weight: 600; color: var(--secondary); font-size: 0.9rem; }
-    
-    input, select {
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 1rem;
+    /* Tabela de Estrutura */
+    .table-responsive {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.05);
     }
 
-    .btn-save {
-      background: var(--primary);
-      color: white;
-      padding: 12px 25px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }
-
-    .btn-save:hover { background: var(--secondary); }
-
-    /* Estilo da Tabela de Exibição */
-    .table-container { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     table { width: 100%; border-collapse: collapse; }
     th { background: var(--secondary); color: white; padding: 15px; text-align: left; }
     td { padding: 12px 15px; border-bottom: 1px solid #eee; }
 
-    .badge-fornecedor {
+    /* Hierarquia Visual (Produto > Volume) */
+    .row-produto { background-color: #f1f5f9; font-weight: bold; color: var(--primary); }
+    .row-volume { font-size: 0.9rem; color: #555; }
+    .indent { padding-left: 45px; position: relative; }
+    .indent::before { content: "↳"; position: absolute; left: 20px; color: #ccc; }
+
+    /* Badges e Botões */
+    .badge-forn {
       background: #e1ecf7;
       color: var(--primary);
-      padding: 4px 8px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: bold;
+      font-size: 0.75rem;
+      text-transform: uppercase;
     }
 
-    .btn-vol {
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 5px 10px;
+    .btn-action {
+      padding: 6px 12px;
       border-radius: 4px;
-      font-size: 0.8rem;
+      border: none;
       cursor: pointer;
+      font-size: 0.8rem;
+      transition: 0.2s;
+    }
+
+    .btn-edit { background: var(--accent); color: white; }
+    .btn-vol { background: #6c757d; color: white; margin-left: 5px; }
+    
+    .search-container { margin-bottom: 20px; }
+    .search-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
 
   <div class="navbar">
-    <h2>Móveis Simonetti - Cadastro de Estoque</h2>
-    <div class="nav-buttons">
-      <button onclick="location.href='dashboard.html'" style="background: rgba(255,255,255,0.2);">Painel Principal</button>
+    <h2>Simonetti - Configuração de Produtos</h2>
+    <div>
+      <button onclick="location.href='dashboard.html'" style="background: rgba(255,255,255,0.2);">Voltar</button>
       <button id="btnSair" style="background: #dc3545;">Sair</button>
     </div>
   </div>
 
   <div class="content">
     
-    <div class="cadastro-container">
-      <h3 style="margin-top: 0; color: var(--primary);">📦 Cadastrar Novo Produto</h3>
-      <div class="form-grid">
+    <div class="card-cadastro">
+      <h3 style="margin-top: 0; color: var(--primary);">📦 Novo Cadastro de Produto</h3>
+      <div class="form-row">
         <div class="form-group">
-          <label>Código (SKU)</label>
-          <input type="text" id="prodCodigo" placeholder="Ex: 102030">
+          <label>Cód. SKU</label>
+          <input type="text" id="newSku" placeholder="Ex: 5590">
         </div>
         <div class="form-group">
-          <label>Descrição do Produto</label>
-          <input type="text" id="prodNome" placeholder="Ex: Roupeiro 6 Portas">
+          <label>Nome do Produto</label>
+          <input type="text" id="newNome" placeholder="Ex: Cama Box Casal">
         </div>
         <div class="form-group">
-          <label>Fábrica (Fornecedor)</label>
-          <select id="prodFornecedor">
-            <option value="">Selecione o Fornecedor...</option>
-            </select>
+          <label>Vincular Fábrica</label>
+          <select id="selectForn">
+            <option value="">Carregando fornecedores...</option>
+          </select>
         </div>
-        <button class="btn-save" id="btnSalvarProduto">Adicionar Produto</button>
+        <button class="btn-save" id="btnSalvarProd" style="background: var(--primary); color: white; padding: 11px 20px; border-radius: 6px; border:none; font-weight:bold; cursor:pointer;">Cadastrar</button>
       </div>
     </div>
 
-    <div style="margin-bottom: 15px;">
-      <input type="text" id="inputBusca" placeholder="🔍 Buscar por código ou nome..." onkeyup="filtrarProdutos()" style="width: 100%; max-width: 400px;">
+    <div class="search-container">
+      <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Buscar por SKU, Produto ou Volume cadastrado..." onkeyup="filtrar()">
     </div>
 
-    <div class="table-container">
-      <table id="tabelaProdutos">
+    <div class="table-responsive">
+      <table id="tabelaGeral">
         <thead>
           <tr>
-            <th>SKU</th>
-            <th>Produto</th>
-            <th>Fábrica</th>
-            <th>Volumes</th>
-            <th>Ações</th>
+            <th>Código / Descrição</th>
+            <th>Vínculo (Fábrica)</th>
+            <th>Volumes Associados</th>
+            <th>Ações de Cadastro</th>
           </tr>
         </thead>
         <tbody id="corpoTabela">
@@ -133,39 +135,39 @@
 
   </div>
 
-  <div id="modalVolume" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
-    <div style="background:white; padding:30px; border-radius:10px; width:400px;">
-      <h3 id="modalTitulo">Adicionar Volume</h3>
-      <div class="form-group">
-        <label>Descrição do Volume</label>
-        <input type="text" id="volDesc" placeholder="Ex: Volume 1/3 - Lateral">
+  <div id="modalVol" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index: 1000;">
+    <div style="background:white; padding:30px; border-radius:12px; width:450px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+      <h3 style="margin-top:0; color: var(--primary);">Configurar Volume</h3>
+      <p id="nomeProdPai" style="font-size: 0.9rem; color: #666;"></p>
+      
+      <div style="margin-top: 15px;">
+        <label style="display:block; font-weight:bold; margin-bottom:5px;">Descrição do Volume</label>
+        <input type="text" id="volDesc" placeholder="Ex: Kit de Ferragens" style="width:100%; padding:10px; box-sizing:border-box;">
       </div>
-      <div class="form-group" style="margin-top:15px;">
-        <label>Quantidade Inicial</label>
-        <input type="number" id="volQtd" value="1">
-      </div>
+
       <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
-        <button onclick="fecharModal()" style="background:#eee; border:none; padding:10px; cursor:pointer;">Cancelar</button>
-        <button id="btnConfirmarVolume" class="btn-save">Confirmar</button>
+        <button onclick="fecharModal()" style="background:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">Cancelar</button>
+        <button id="btnSalvarVol" class="btn-save" style="background: var(--primary); color: white; padding:10px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer;">Salvar Volume</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="js/produtos.js"></script>
-  
+  <script type="module" src="js/cadastro-produtos.js"></script>
+
   <script>
-    // Função simples de busca na tabela
-    function filtrarProdutos() {
+    // Função de busca visual simples
+    function filtrar() {
       const termo = document.getElementById("inputBusca").value.toLowerCase();
       const linhas = document.querySelectorAll("#corpoTabela tr");
+      
       linhas.forEach(linha => {
-        const texto = linha.innerText.toLowerCase();
-        linha.style.display = texto.includes(termo) ? "" : "none";
+        const conteudo = linha.innerText.toLowerCase();
+        linha.style.display = conteudo.includes(termo) ? "" : "none";
       });
     }
 
     function fecharModal() {
-      document.getElementById("modalVolume").style.display = "none";
+      document.getElementById("modalVol").style.display = "none";
     }
   </script>
 
