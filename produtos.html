@@ -1,175 +1,125 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simonetti - Gestão de Cadastros</title>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    :root {
-      --primary: #004a99;
-      --secondary: #002d5f;
-      --accent: #f39c12;
-      --light-gray: #f8f9fa;
-    }
+import { db } from './firebase-config.js'; 
+import { 
+    collection, 
+    addDoc, 
+    getDocs, 
+    onSnapshot, 
+    query, 
+    orderBy, 
+    doc, 
+    updateDoc, 
+    arrayUnion 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    body { background-color: #f4f7f6; }
+const produtosCol = collection(db, "produtos");
+const fornecedoresCol = collection(db, "fornecedores");
 
-    /* Estilo do Card de Cadastro */
-    .card-cadastro {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-      margin-bottom: 30px;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 2fr 1.5fr auto;
-      gap: 15px;
-      align-items: end;
-    }
-
-    /* Tabela de Estrutura */
-    .table-responsive {
-      background: white;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.05);
-    }
-
-    table { width: 100%; border-collapse: collapse; }
-    th { background: var(--secondary); color: white; padding: 15px; text-align: left; }
-    td { padding: 12px 15px; border-bottom: 1px solid #eee; }
-
-    /* Hierarquia Visual (Produto > Volume) */
-    .row-produto { background-color: #f1f5f9; font-weight: bold; color: var(--primary); }
-    .row-volume { font-size: 0.9rem; color: #555; }
-    .indent { padding-left: 45px; position: relative; }
-    .indent::before { content: "↳"; position: absolute; left: 20px; color: #ccc; }
-
-    /* Badges e Botões */
-    .badge-forn {
-      background: #e1ecf7;
-      color: var(--primary);
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-    }
-
-    .btn-action {
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: 0.2s;
-    }
-
-    .btn-edit { background: var(--accent); color: white; }
-    .btn-vol { background: #6c757d; color: white; margin-left: 5px; }
+// --- 1. CARREGAR FORNECEDORES (Busca CNPJ e Nome) ---
+async function carregarFornecedores() {
+    const select = document.getElementById('selectForn');
+    const snapshot = await getDocs(fornecedoresCol);
     
-    .search-container { margin-bottom: 20px; }
-    .search-input {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 1rem;
-    }
-  </style>
-</head>
-<body>
+    select.innerHTML = '<option value="">Selecione uma Fábrica...</option>';
+    snapshot.forEach(docSnap => {
+        const forn = docSnap.data();
+        // Usamos o CNPJ no value e o Nome no texto
+        select.innerHTML += `<option value="${forn.cnpj}">${forn.nome} (${forn.cnpj})</option>`;
+    });
+}
 
-  <div class="navbar">
-    <h2>Simonetti - Configuração de Produtos</h2>
-    <div>
-      <button onclick="location.href='dashboard.html'" style="background: rgba(255,255,255,0.2);">Voltar</button>
-      <button id="btnSair" style="background: #dc3545;">Sair</button>
-    </div>
-  </div>
-
-  <div class="content">
+// --- 2. LISTAR PRODUTOS (Real-time) ---
+function listarProdutos() {
+    const q = query(produtosCol, orderBy("sku", "asc"));
     
-    <div class="card-cadastro">
-      <h3 style="margin-top: 0; color: var(--primary);">📦 Novo Cadastro de Produto</h3>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Cód. SKU</label>
-          <input type="text" id="newSku" placeholder="Ex: 5590">
-        </div>
-        <div class="form-group">
-          <label>Nome do Produto</label>
-          <input type="text" id="newNome" placeholder="Ex: Cama Box Casal">
-        </div>
-        <div class="form-group">
-          <label>Vincular Fábrica</label>
-          <select id="selectForn">
-            <option value="">Carregando fornecedores...</option>
-          </select>
-        </div>
-        <button class="btn-save" id="btnSalvarProd" style="background: var(--primary); color: white; padding: 11px 20px; border-radius: 6px; border:none; font-weight:bold; cursor:pointer;">Cadastrar</button>
-      </div>
-    </div>
+    onSnapshot(q, (snapshot) => {
+        const corpoTabela = document.getElementById('corpoTabela');
+        corpoTabela.innerHTML = '';
 
-    <div class="search-container">
-      <input type="text" id="inputBusca" class="search-input" placeholder="🔍 Buscar por SKU, Produto ou Volume cadastrado..." onkeyup="filtrar()">
-    </div>
+        snapshot.forEach(docSnap => {
+            const prod = docSnap.data();
+            const id = docSnap.id;
 
-    <div class="table-responsive">
-      <table id="tabelaGeral">
-        <thead>
-          <tr>
-            <th>Código / Descrição</th>
-            <th>Vínculo (Fábrica)</th>
-            <th>Volumes Associados</th>
-            <th>Ações de Cadastro</th>
-          </tr>
-        </thead>
-        <tbody id="corpoTabela">
-          </tbody>
-      </table>
-    </div>
+            // Linha Principal
+            const tr = document.createElement('tr');
+            tr.className = 'row-produto';
+            tr.innerHTML = `
+                <td>${prod.sku} - ${prod.nome}</td>
+                <td><span class="badge-forn">${prod.fornecedorNome || 'N/A'}</span></td>
+                <td>${prod.volumes ? prod.volumes.length : 0} Vol.</td>
+                <td>
+                    <button class="btn-action btn-vol" onclick="abrirModal('${id}', '${prod.nome}')">+ Volume</button>
+                </td>
+            `;
+            corpoTabela.appendChild(tr);
 
-  </div>
+            // Sub-linhas de Volumes
+            if (prod.volumes && prod.volumes.length > 0) {
+                prod.volumes.forEach(vol => {
+                    const trVol = document.createElement('tr');
+                    trVol.className = 'row-volume';
+                    trVol.innerHTML = `
+                        <td class="indent">${vol}</td>
+                        <td colspan="3"></td>
+                    `;
+                    corpoTabela.appendChild(trVol);
+                });
+            }
+        });
+    });
+}
 
-  <div id="modalVol" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index: 1000;">
-    <div style="background:white; padding:30px; border-radius:12px; width:450px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-      <h3 style="margin-top:0; color: var(--primary);">Configurar Volume</h3>
-      <p id="nomeProdPai" style="font-size: 0.9rem; color: #666;"></p>
-      
-      <div style="margin-top: 15px;">
-        <label style="display:block; font-weight:bold; margin-bottom:5px;">Descrição do Volume</label>
-        <input type="text" id="volDesc" placeholder="Ex: Kit de Ferragens" style="width:100%; padding:10px; box-sizing:border-box;">
-      </div>
+// --- 3. CADASTRAR PRODUTO ---
+document.getElementById('btnSalvarProd').addEventListener('click', async () => {
+    const sku = document.getElementById('newSku').value;
+    const nome = document.getElementById('newNome').value;
+    const select = document.getElementById('selectForn');
+    const cnpj = select.value;
+    const nomeForn = select.options[select.selectedIndex].text.split(' (')[0]; // Pega só o nome antes do CNPJ
 
-      <div style="margin-top:25px; display:flex; justify-content:flex-end; gap:10px;">
-        <button onclick="fecharModal()" style="background:#eee; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">Cancelar</button>
-        <button id="btnSalvarVol" class="btn-save" style="background: var(--primary); color: white; padding:10px 20px; border-radius:6px; border:none; font-weight:bold; cursor:pointer;">Salvar Volume</button>
-      </div>
-    </div>
-  </div>
+    if (!sku || !nome || !cnpj) return alert("Preencha tudo!");
 
-  <script type="module" src="js/cadastro-produtos.js"></script>
+    await addDoc(produtosCol, {
+        sku,
+        nome,
+        fornecedorCnpj: cnpj,
+        fornecedorNome: nomeForn,
+        volumes: [],
+        criadoEm: new Date()
+    });
 
-  <script>
-    // Função de busca visual simples
-    function filtrar() {
-      const termo = document.getElementById("inputBusca").value.toLowerCase();
-      const linhas = document.querySelectorAll("#corpoTabela tr");
-      
-      linhas.forEach(linha => {
-        const conteudo = linha.innerText.toLowerCase();
-        linha.style.display = conteudo.includes(termo) ? "" : "none";
-      });
+    document.getElementById('newSku').value = '';
+    document.getElementById('newNome').value = '';
+});
+
+// --- 4. SALVAR VOLUME (DENTRO DO PRODUTO) ---
+document.getElementById('btnSalvarVol').addEventListener('click', async (e) => {
+    const idProd = e.target.dataset.idProd;
+    const descVol = document.getElementById('volDesc').value;
+
+    if (!descVol) return alert("Digite a descrição do volume!");
+
+    try {
+        const docRef = doc(db, "produtos", idProd);
+        // O arrayUnion adiciona o item ao array sem duplicar e sem apagar o que já existe
+        await updateDoc(docRef, {
+            volumes: arrayUnion(descVol)
+        });
+
+        document.getElementById('volDesc').value = '';
+        fecharModal();
+    } catch (err) {
+        console.error("Erro ao adicionar volume:", err);
     }
+});
 
-    function fecharModal() {
-      document.getElementById("modalVol").style.display = "none";
-    }
-  </script>
+// Inicialização
+window.onload = () => {
+    carregarFornecedores();
+    listarProdutos();
+};
 
-</body>
-</html>
+window.abrirModal = (id, nome) => {
+    document.getElementById('modalVol').style.display = 'flex';
+    document.getElementById('nomeProdPai').innerText = `Produto: ${nome}`;
+    document.getElementById('btnSalvarVol').dataset.idProd = id;
+};
