@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Produtos e Volumes - Simonetti</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .sub-item { background-color: #f9f9f9 !important; font-size: 0.9em; }
+    .indent { padding-left: 30px; color: #555; }
+    .status-ocioso { color: red; font-weight: bold; }
+    .status-bom { color: green; }
+  </style>
+</head>
+<body>
+  <div class="navbar">
+    <h2>Estoque de Assistência (Pulmão)</h2>
+    <div>
+      <a href="fornecedores.html"><button>Fornecedores</button></a>
+      <a href="dashboard.html"><button>Voltar</button></a>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="cadastroProduto">
+      <h3>Cadastrar Produto Principal</h3>
+      <input type="text" id="cod" placeholder="Código (SKU)">
+      <input type="text" id="nome" placeholder="Descrição do Produto">
+      <select id="selectFornecedor"><option value="">Carregando Fornecedores...</option></select>
+      <button id="btnSalvar">Salvar Produto</button>
+    </div>
+
+    <table id="tabelaProdutos">
+      <thead>
+        <tr>
+          <th>Código / Descrição</th>
+          <th>Qtd / Volume</th>
+          <th>Tempo em Estoque</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { db } from "./js/firebase-config.js";
+    import { collection, addDoc, getDocs, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+    // 1. Carregar Fornecedores no Select
+    async function carregarFornecedores() {
+      const snap = await getDocs(collection(db, "fornecedores"));
+      const select = document.getElementById("selectFornecedor");
+      select.innerHTML = '<option value="">Selecione o Fornecedor</option>';
+      snap.forEach(doc => {
+        select.innerHTML += `<option value="${doc.id}">${doc.data().nome}</option>`;
+      });
+    }
+
+    // 2. Salvar Produto
+    document.getElementById("btnSalvar").onclick = async () => {
+      const dados = {
+        codigo: document.getElementById("cod").value,
+        nome: document.getElementById("nome").value,
+        fornecedorId: document.getElementById("selectFornecedor").value,
+        dataCadastro: serverTimestamp()
+      };
+      await addDoc(collection(db, "produtos"), dados);
+      location.reload();
+    };
+
+    // 3. Listar Produtos e Volumes (Aninhados)
+    async function listarTudo() {
+      const prodSnap = await getDocs(collection(db, "produtos"));
+      const volSnap = await getDocs(collection(db, "volumes"));
+      const listaVolumes = volSnap.docs.map(d => ({id: d.id, ...d.data()}));
+      const corpo = document.querySelector("#tabelaProdutos tbody");
+      corpo.innerHTML = "";
+
+      prodSnap.forEach(docP => {
+        const p = docP.data();
+        corpo.innerHTML += `
+          <tr style="background:#eee; font-weight:bold;">
+            <td>${p.codigo} - ${p.nome}</td>
+            <td>--</td>
+            <td>--</td>
+            <td><button onclick="addVolume('${docP.id}', '${p.nome}')">Incluir Volume</button></td>
+          </tr>`;
+
+        const vols = listaVolumes.filter(v => v.produtoId === docP.id);
+        vols.forEach(v => {
+          const dias = v.ultimaMovimentacao ? Math.floor((new Date() - v.ultimaMovimentacao.toDate())/(1000*60*60*24)) : 0;
+          corpo.innerHTML += `
+            <tr class="sub-item">
+              <td class="indent">↳ ${v.descricao}</td>
+              <td>${v.quantidade} un</td>
+              <td class="${dias > 30 ? 'status-ocioso' : 'status-bom'}">${dias} dias parado</td>
+              <td><button>Saída</button></td>
+            </tr>`;
+        });
+      });
+    }
+
+    window.addVolume = async (id, nome) => {
+      const desc = prompt(`Descrição do Volume para ${nome} (ex: Volume 1/2):`);
+      const qtd = prompt("Quantidade:");
+      if(desc && qtd) {
+        await addDoc(collection(db, "volumes"), {
+          produtoId: id,
+          descricao: desc,
+          quantidade: parseInt(qtd),
+          ultimaMovimentacao: serverTimestamp()
+        });
+        location.reload();
+      }
+    };
+
+    carregarFornecedores();
+    listarTudo();
+  </script>
+</body>
+</html>
