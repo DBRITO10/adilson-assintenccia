@@ -2,22 +2,86 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Histórico de Giro - Simonetti</title>
-  <link rel="stylesheet\" href="css/style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simonetti - Histórico de Giro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --primary: #004a99;
+      --danger: #dc3545;
+      --success: #28a745;
+      --gray: #6c757d;
+    }
+
+    body { background-color: #f4f7f6; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* Layout Cabeçalho (Mantendo o padrão do Produtos.html) */
+    .header-site {
+      text-align: center;
+      padding: 30px 0 10px 0;
+      background: linear-gradient(135deg, #004a99 0%, #002d5f 100%);
+      color: white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .header-site h1 { margin: 0; font-size: 2.2rem; text-transform: uppercase; letter-spacing: 2px; }
+
+    .nav-bar {
+      background: #fff;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+    /* Estilo da Tabela de Ações */
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    th { background: var(--primary); color: white; padding: 15px; text-align: left; font-size: 0.9rem; text-transform: uppercase; }
+    td { padding: 15px; border-bottom: 1px solid #eee; font-size: 0.95rem; }
+
+    /* Cores de Status para os Tipos de Ação */
+    .tipo-Entrada { color: var(--success); font-weight: bold; background: #e8f5e9; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; }
+    .tipo-Saída { color: var(--danger); font-weight: bold; background: #ffebee; padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; }
+
+    .btn { border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; text-decoration: none; display: inline-block; }
+    .btn-voltar { background: var(--gray); color: white; }
+    .btn-delete { background: var(--danger); color: white; padding: 5px 12px; font-size: 0.8rem; }
+
+    .filtro-box {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    select { padding: 10px; border: 2px solid #eee; border-radius: 8px; flex: 1; max-width: 300px; }
+  </style>
 </head>
 <body>
-  <div class="navbar">
-    <h2>Histórico de Movimentações (Giro)</h2>
-    <div>
-      <a href="dashboard.html"><button style="background: #6c757d;">Voltar ao Painel</button></a>
-    </div>
-  </div>
 
-  <div class="content">
-    <div class="card" style="margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-      <label><strong>Filtrar por:</strong></label>
-      <select id="filtro" style="width: 200px;">
-        <option value="Todos">Todos os Registros</option>
+  <header class="header-site">
+    <h1>Histórico de Movimentações</h1>
+    <p>Auditoria de Entradas e Saídas - Pulmão de Assistência</p>
+  </header>
+
+  <nav class="nav-bar">
+    <a href="dashboard.html" class="btn btn-voltar">Painel Principal</a>
+    <a href="produtos.html" class="btn" style="background: var(--primary); color: white;">📦 Voltar ao Estoque</a>
+  </nav>
+
+  <div class="container">
+    <div class="filtro-box">
+      <strong>Filtrar Ações:</strong>
+      <select id="filtro">
+        <option value="Todos">Todas as Ações</option>
         <option value="Entrada">Somente Entradas</option>
         <option value="Saída">Somente Saídas</option>
       </select>
@@ -26,12 +90,12 @@
     <table id="tabela">
       <thead>
         <tr>
-          <th>Data/Hora</th>
-          <th>Usuário</th>
-          <th>Produto/Volume</th>
-          <th>Tipo</th>
+          <th>Data e Hora</th>
+          <th>Usuário (Responsável)</th>
+          <th>Produto / Volume</th>
+          <th>Tipo de Ação</th>
           <th>Qtd</th>
-          <th>Ação</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -40,5 +104,6 @@
   </div>
 
   <script type="module" src="historico.js"></script>
+
 </body>
 </html>
